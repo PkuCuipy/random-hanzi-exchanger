@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汉字同音字转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+
+  <body class="bg-gray-50 min-h-screen p-4">
+    <div class="max-w-2xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8 text-gray-800 mt-8">汉字同音字随机转换器</h1>
+
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <label for="input" class="block text-sm font-medium text-gray-700 mb-2">输入中文：</label>
+        <textarea id="input"
+          class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          rows="4" placeholder="请输入中文字符，如：你好世界"></textarea>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">同音字转换结果（相同声调）：</label>
+        <div id="tonalOutput" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-md min-h-24 text-md">
+          在上方输入框中输入中文，这里将显示同音同调字转换结果
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">同音字转换结果（不一定同声调）：</label>
+        <div id="output" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-md min-h-24 text-md">
+          在上方输入框中输入中文，这里将显示同音字转换结果
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <button id="regenerate"
+          class="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          🎲 重新生成
+        </button>
+      </div>
+    </div>
+
+    <script src="data/hanzi-to-pinyin.js"></script>
+    <script src="data/hanzi-to-pinyin-with-tone.js"></script>
+    <script src="data/common-hanzi-list.js"></script>
+    <script>
+      // Main application logic
+      let pinyinToHanzi = {};
+      let pinyinWithToneToHanzi = {};
+      let commonHanziSet = new Set();
+      let currentInput = '';
+
+      // Initialize the application
+      function init() {
+        buildCommonHanziSet();
+        buildPinyinToHanziMap();
+        buildTonalPinyinToHanziMap();
+        setupEventListeners();
+      }
+
+      // Build set of common characters for fast lookup
+      function buildCommonHanziSet() {
+        commonHanziSet = new Set(commonHanziList);
+        console.log(`Loaded ${commonHanziSet.size} common characters`);
+      }
+
+      // Build reverse mapping from pinyin to characters (only common characters)
+      function buildPinyinToHanziMap() {
+        pinyinToHanzi = {};
+
+        for (const [hanzi, pinyin] of Object.entries(hanziToPinyin)) {
+          // Only include characters that are in the common character set
+          if (commonHanziSet.has(hanzi)) {
+            if (!pinyinToHanzi[pinyin]) {
+              pinyinToHanzi[pinyin] = [];
+            }
+            pinyinToHanzi[pinyin].push(hanzi);
+          }
+        }
+
+        console.log(`Built mapping for ${Object.keys(pinyinToHanzi).length} unique pinyin from common characters`);
+      }
+
+      // Build reverse mapping from tonal pinyin to characters (only common characters)
+      function buildTonalPinyinToHanziMap() {
+        pinyinWithToneToHanzi = {};
+
+        for (const [hanzi, pinyin] of Object.entries(hanziToPinyinWithTone)) {
+          // Only include characters that are in the common character set
+          if (commonHanziSet.has(hanzi)) {
+            if (!pinyinWithToneToHanzi[pinyin]) {
+              pinyinWithToneToHanzi[pinyin] = [];
+            }
+            pinyinWithToneToHanzi[pinyin].push(hanzi);
+          }
+        }
+
+        console.log(`Built tonal mapping for ${Object.keys(pinyinWithToneToHanzi).length} unique tonal pinyin from common characters`);
+      }
+
+      // Set up event listeners
+      function setupEventListeners() {
+        const input = document.getElementById('input');
+        const regenerateBtn = document.getElementById('regenerate');
+
+        input.addEventListener('input', handleInput);
+        regenerateBtn.addEventListener('click', handleRegenerate);
+      }
+
+      // Handle input change
+      function handleInput(event) {
+        currentInput = event.target.value;
+        processText(currentInput);
+        processTonalText(currentInput);
+      }
+
+      // Handle regenerate button click
+      function handleRegenerate() {
+        if (currentInput) {
+          processText(currentInput);
+          processTonalText(currentInput);
+        }
+      }
+
+      // Process input text and generate output
+      function processText(text) {
+        if (!text.trim()) {
+          document.getElementById('output').textContent = '在上方输入框中输入中文，这里将显示同音字转换结果';
+          return;
+        }
+
+        let result = '';
+        for (const char of text) {
+          if (commonHanziSet.has(char) && hanziToPinyin[char]) {
+            result += getRandomHomophone(char);
+          } else {
+            result += char; // Keep original if not in common set or no mapping
+          }
+        }
+
+        document.getElementById('output').textContent = result;
+      }
+
+      // Process input text and generate tonal output
+      function processTonalText(text) {
+        if (!text.trim()) {
+          document.getElementById('tonalOutput').textContent = '在上方输入框中输入中文，这里将显示同音同调字转换结果';
+          return;
+        }
+
+        let result = '';
+        for (const char of text) {
+          if (commonHanziSet.has(char) && hanziToPinyinWithTone[char]) {
+            result += getRandomTonalHomophone(char);
+          } else {
+            result += char; // Keep original if not in common set or no mapping
+          }
+        }
+
+        document.getElementById('tonalOutput').textContent = result;
+      }
+
+      // Get random character with same pinyin
+      function getRandomHomophone(character) {
+        const pinyin = hanziToPinyin[character];
+        if (!pinyin || !pinyinToHanzi[pinyin]) {
+          return character; // Return original if no mapping found
+        }
+
+        const candidates = pinyinToHanzi[pinyin];
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex];
+      }
+
+      // Get random character with same tonal pinyin
+      function getRandomTonalHomophone(character) {
+        const pinyinWithTone = hanziToPinyinWithTone[character];
+        if (!pinyinWithTone || !pinyinWithToneToHanzi[pinyinWithTone]) {
+          return character; // Return original if no mapping found
+        }
+
+        const candidates = pinyinWithToneToHanzi[pinyinWithTone];
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex];
+      }
+
+      // Initialize when page loads
+      document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
+
+</html>

@@ -1,4 +1,4 @@
-{
+hanziToPinyin = {
   "一":"yi",
   "丁":"ding",
   "七":"qi",
